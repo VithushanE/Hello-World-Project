@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // Define the structure of a user object
 interface User {
@@ -9,51 +9,13 @@ interface User {
   interests: string[];
 }
 
-// Mock data for the user list
-const users: User[] = [
-  {
-    id: 1,
-    name: 'Aria Montgomery',
-    email: 'aria.m@example.com',
-    imageUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-    interests: ['Photography', 'Reading', 'Fashion'],
-  },
-  {
-    id: 2,
-    name: 'Benjamin Carter',
-    email: 'ben.c@example.com',
-    imageUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704e',
-    interests: ['Hiking', 'Cooking', 'Jazz Music'],
-  },
-  {
-    id: 3,
-    name: 'Chloe Davis',
-    email: 'chloe.d@example.com',
-    imageUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704f',
-    interests: ['Yoga', 'Gardening', 'Painting'],
-  },
-  {
-    id: 4,
-    name: 'Daniel Evans',
-    email: 'daniel.e@example.com',
-    imageUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704a',
-    interests: ['Gaming', 'Coding', 'Sci-Fi Movies'],
-  },
-  {
-    id: 5,
-    name: 'Eva Green',
-    email: 'eva.g@example.com',
-    imageUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704b',
-    interests: ['Traveling', 'Volunteering', 'Documentaries'],
-  },
-  {
-    id: 6,
-    name: 'Finn Harris',
-    email: 'finn.h@example.com',
-    imageUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704c',
-    interests: ['Surfing', 'Skateboarding', 'Indie Rock'],
-  },
-];
+const SPREADSHEET_ID = '1Pu8off5ibGfMAJaXq6Y_bSQSytgyVc00_JrVPIOnEkQ';
+const SHEET_NAME = 'Sheet1';
+const API_KEY = process.env.API_KEY; 
+const SHEET_RANGE = 'A2:E';
+
+const SHEET_API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!${SHEET_RANGE}?key=${API_KEY}`;
+
 
 // A component to render a single user's card
 const UserCard: React.FC<{ user: User; onCardClick: (user: User) => void }> = ({ user, onCardClick }) => {
@@ -134,17 +96,173 @@ const UserModal: React.FC<{ user: User; onClose: () => void }> = ({ user, onClos
   );
 };
 
+// A component for the Add User modal
+const AddUserModal: React.FC<{ onClose: () => void; onSave: (newUser: Omit<User, 'id' | 'imageUrl'>) => void; }> = ({ onClose, onSave }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [interests, setInterests] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email) {
+      alert('Name and Email are required.');
+      return;
+    }
+    onSave({ name, email, interests: interests.split(',').map(i => i.trim()).filter(Boolean) });
+  };
+  
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 animate-fade-in"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-user-modal-title"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8 relative animate-scale-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="add-user-modal-title" className="text-3xl font-bold text-white mb-6 text-center">Add New User</h2>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">Name</label>
+            <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+            <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+          <div>
+            <label htmlFor="interests" className="block text-sm font-medium text-gray-300 mb-1">Interests (comma-separated)</label>
+            <input type="text" id="interests" value={interests} onChange={(e) => setInterests(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-4 mt-8">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-white font-semibold transition-colors">Cancel</button>
+          <button type="submit" className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white font-semibold transition-opacity">Save User</button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 
 // The main App component
 const App: React.FC = () => {
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAddUserModalOpen, setAddUserModalOpen] = useState<boolean>(false);
 
-  const handleCardClick = (user: User) => {
-    setSelectedUser(user);
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (!API_KEY) {
+          throw new Error("API_KEY is not set. Please configure it in your environment.");
+        }
+        const response = await fetch(SHEET_API_URL);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error.message || `An error occurred: ${response.statusText}`);
+        }
+        const data = await response.json();
+        const parsedUsers: User[] = (data.values || []).map((row: string[]): User => ({
+          id: parseInt(row[0], 10),
+          name: row[1] || '',
+          email: row[2] || '',
+          imageUrl: row[3] || `https://i.pravatar.cc/150?u=${row[0]}`,
+          interests: row[4] ? row[4].split(',').map(interest => interest.trim()) : [],
+        }));
+        setUsers(parsedUsers);
+      } catch (err) {
+        if (err instanceof Error) {
+            setError(`Failed to load users. Please ensure the Google Sheet is public and the API key is correct. Details: ${err.message}`);
+        } else {
+            setError("An unknown error occurred.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+  
+  const handleSaveUser = useCallback((newUserData: Omit<User, 'id' | 'imageUrl'>) => {
+    const newUser: User = {
+      id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
+      ...newUserData,
+      imageUrl: `https://i.pravatar.cc/150?u=${Date.now()}`
+    };
+
+    // Optimistic UI update
+    setUsers(prevUsers => [...prevUsers, newUser]);
+    setAddUserModalOpen(false);
+
+    // Persist to Google Sheet (requires a secure backend)
+    saveUserToSheet(newUser);
+  }, [users]);
+  
+  /**
+   * NOTE ON SAVING DATA:
+   * Direct client-side API calls to write to Google Sheets are insecure as they expose API keys or OAuth credentials.
+   * The recommended approach is to create a simple backend service (e.g., using Google Apps Script, Cloud Functions, etc.).
+   * This function is a placeholder for a call to your secure backend endpoint.
+   */
+  const saveUserToSheet = (user: User) => {
+    console.log("Saving user (placeholder). In a real app, this would be a fetch call to a secure backend.", user);
+    
+    // Example of what the backend call might look like:
+    /*
+    const backendUrl = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+    fetch(backendUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user),
+    })
+    .then(response => response.json())
+    .then(data => console.log('Save success:', data))
+    .catch(error => {
+      console.error('Save failed:', error);
+      // Optional: handle error, e.g., remove the optimistically added user from the state
+    });
+    */
   };
-
-  const handleCloseModal = () => {
-    setSelectedUser(null);
+  
+  const renderContent = () => {
+    if (loading) {
+      return <p className="text-center text-gray-400 text-lg">Loading users from Google Sheet...</p>;
+    }
+    if (error) {
+      return <div className="text-center text-red-400 bg-red-900/50 p-4 rounded-lg">{error}</div>;
+    }
+    if (users.length === 0) {
+        return <p className="text-center text-gray-400 text-lg">No users found in the sheet.</p>;
+    }
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {users.map(user => (
+          <UserCard key={user.id} user={user} onCardClick={setSelectedUser} />
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -157,16 +275,22 @@ const App: React.FC = () => {
               </span>
             </h1>
             <p className="mt-4 text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
-              A beautifully designed directory of our amazing users.
+              A beautifully designed directory of our amazing users, powered by Google Sheets.
             </p>
+            <div className="mt-8">
+                <button 
+                  onClick={() => setAddUserModalOpen(true)}
+                  className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white font-semibold transition-opacity shadow-lg transform hover:scale-105"
+                  aria-label="Add new user"
+                >
+                  Add New User
+                </button>
+            </div>
         </header>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {users.map(user => (
-            <UserCard key={user.id} user={user} onCardClick={handleCardClick} />
-          ))}
-        </div>
+        {renderContent()}
       </div>
-      {selectedUser && <UserModal user={selectedUser} onClose={handleCloseModal} />}
+      {selectedUser && <UserModal user={selectedUser} onClose={() => setSelectedUser(null)} />}
+      {isAddUserModalOpen && <AddUserModal onClose={() => setAddUserModalOpen(false)} onSave={handleSaveUser} />}
     </main>
   );
 };
